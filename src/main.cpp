@@ -48,7 +48,7 @@ void ShowLegalNotice(SDL_Window* window) {
     if (SDL_ShowMessageBox(&msg, &buttonid) == 0) {
         switch (buttonid) {
             case 2:
-                OpenURL("https://github.com/rilwag2612/nights#legal-notice");
+                OpenURL("https://github.com/rilwag2612/nights?tab=readme-ov-file#%EF%B8%8F-legal-notice");
                 ShowLegalNotice(window); // reopen after viewing
                 break;
             case 0:
