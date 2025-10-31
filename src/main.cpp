@@ -130,24 +130,24 @@ int main(int argc, char* argv[]) {
     // --- Animatronics row ---
     const int animH = 150;
     const int spacing = 20;
-    std::vector<SDL_Rect> animRects(numAnimatronics);
+    std::vector<SDL_Rect> animatronicRects(numAnimatronics);
     int totalWidth = 0;
 
     for (int i = 0; i < numAnimatronics; ++i) {
         int w = 100, h = 100;
         if (animatronicTextures[i]) SDL_QueryTexture(animatronicTextures[i], nullptr, nullptr, &w, &h);
-        animRects[i].h = animH;
-        animRects[i].w = (int)((float)w * animH / h);
-        totalWidth += animRects[i].w;
+        animatronicRects[i].h = animH;
+        animatronicRects[i].w = (int)((float)w * animH / h);
+        totalWidth += animatronicRects[i].w;
     }
     totalWidth += spacing * (numAnimatronics -1);
     int startX = (windowWidth - totalWidth)/2;
     int rowY = endoRect.y + endoRect.h + 30;
     int currentX = startX;
     for (int i=0;i<numAnimatronics;i++){
-        animRects[i].x = currentX;
-        animRects[i].y = rowY;
-        currentX += animRects[i].w + spacing;
+        animatronicRects[i].x = currentX;
+        animatronicRects[i].y = rowY;
+        currentX += animatronicRects[i].w + spacing;
     }
 
     // --- Logo ---
@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
 
         if (endoTex) SDL_RenderCopy(renderer, endoTex, nullptr, &endoRect);
         for(int i=0;i<numAnimatronics;i++)
-            if(animatronicTextures[i]) SDL_RenderCopy(renderer, animatronicTextures[i], nullptr, &animRects[i]);
+            if(animatronicTextures[i]) SDL_RenderCopy(renderer, animatronicTextures[i], nullptr, &animatronicRects[i]);
         SDL_RenderCopy(renderer, logoTex, nullptr, &logoRectBottom);
 
         SDL_SetRenderDrawColor(renderer, 50,50,50,255);

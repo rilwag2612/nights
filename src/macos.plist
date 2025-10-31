@@ -17,7 +17,7 @@
 
     <!-- Executable -->
     <key>CFBundleExecutable</key>
-    <string>FNaF N.I.G.H.T.S.</string>
+    <string>Nights</string>
 
     <!-- App type -->
     <key>CFBundlePackageType</key>

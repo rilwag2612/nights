@@ -9,14 +9,8 @@ make clean
 echo "Building binary..."
 make all
 
-echo "Creating macOS bundle..."
-make bundle
+echo "Creating macOS ARM64 bundle..."
+make macos-arm
 
-echo "Build complete!"
-
-read -q "?Launch app bundle? [Y/n]: " REPLY
-echo
-# Treat empty input (Enter) as yes
-if [[ -z "$REPLY" || "$REPLY" =~ [Yy] ]]; then
-    "./bundle/$TARGET.app/Contents/MacOS/$TARGET"
-fi
+echo "Creating macOS x86_64 bundle..."
+make macos-intel

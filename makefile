@@ -8,34 +8,33 @@ UNAME_S := $(shell uname -s)
 # -----------------------------
 CXX := clang++
 CXXFLAGS := -std=c++17 -Wall -I./src -I./src/imgui -I./src/imgui/backends
-
 LDFLAGS :=
 
 # -----------------------------
 # Platform-specific SDL2 detection
 # -----------------------------
 ifeq ($(UNAME_S),Darwin)
-    SDL2_CFLAGS  := $(shell sdl2-config --cflags)
-    SDL2_LDFLAGS := $(shell sdl2-config --libs)
-    
-    IMGFLAGS  := -I$(shell brew --prefix sdl2_image)/include
-    IMGLIBS   := -L$(shell brew --prefix sdl2_image)/lib -lSDL2_image
+    # Will adjust architecture in targets
+    BREW_PREFIX_ARM ?= /opt/homebrew
+    BREW_PREFIX_INTEL ?= /usr/local
 
-    MIXFLAGS  := -I$(shell brew --prefix sdl2_mixer)/include
-    MIXLIBS   := -L$(shell brew --prefix sdl2_mixer)/lib -lSDL2_mixer
+    SDL2_FLAGS_ARM  := -I$(BREW_PREFIX_ARM)/include/SDL2
+    SDL2_LIBS_ARM   := -L$(BREW_PREFIX_ARM)/lib -lSDL2
+    IMG_FLAGS_ARM   := -I$(BREW_PREFIX_ARM)/opt/sdl2_image/include
+    IMG_LIBS_ARM    := -L$(BREW_PREFIX_ARM)/opt/sdl2_image/lib -lSDL2_image
+    MIX_FLAGS_ARM   := -I$(BREW_PREFIX_ARM)/opt/sdl2_mixer/include
+    MIX_LIBS_ARM    := -L$(BREW_PREFIX_ARM)/opt/sdl2_mixer/lib -lSDL2_mixer
+    TTF_FLAGS_ARM   := -I$(BREW_PREFIX_ARM)/opt/sdl2_ttf/include
+    TTF_LIBS_ARM    := -L$(BREW_PREFIX_ARM)/opt/sdl2_ttf/lib -lSDL2_ttf
 
-    TTFFLAGS  := -I$(shell brew --prefix sdl2_ttf)/include
-    TTFLIBS   := -L$(shell brew --prefix sdl2_ttf)/lib -lSDL2_ttf
-
-    CXXFLAGS += $(SDL2_CFLAGS) $(IMGFLAGS) $(MIXFLAGS) $(TTFFLAGS) -arch arm64
-    LDFLAGS  += $(SDL2_LDFLAGS) $(IMGLIBS) $(MIXLIBS) $(TTFLIBS) -arch arm64
-else ifeq ($(UNAME_S),Linux)
-    CXXFLAGS += $(shell pkg-config --cflags sdl2 SDL2_image SDL2_mixer SDL2_ttf)
-    LDFLAGS  += $(shell pkg-config --libs sdl2 SDL2_image SDL2_mixer SDL2_ttf)
-else
-    SDL2_PREFIX := C:/SDL2
-    CXXFLAGS += -I$(SDL2_PREFIX)/include
-    LDFLAGS  += -L$(SDL2_PREFIX)/lib -lmingw32 -lSDL2main -lSDL2 -lSDL2_image -lSDL2_mixer -lSDL2_ttf
+    SDL2_FLAGS_INTEL  := -I$(BREW_PREFIX_INTEL)/include/SDL2
+    SDL2_LIBS_INTEL   := -L$(BREW_PREFIX_INTEL)/lib -lSDL2
+    IMG_FLAGS_INTEL   := -I$(BREW_PREFIX_INTEL)/opt/sdl2_image/include
+    IMG_LIBS_INTEL    := -L$(BREW_PREFIX_INTEL)/opt/sdl2_image/lib -lSDL2_image
+    MIX_FLAGS_INTEL   := -I$(BREW_PREFIX_INTEL)/opt/sdl2_mixer/include
+    MIX_LIBS_INTEL    := -L$(BREW_PREFIX_INTEL)/opt/sdl2_mixer/lib -lSDL2_mixer
+    TTF_FLAGS_INTEL   := -I$(BREW_PREFIX_INTEL)/opt/sdl2_ttf/include
+    TTF_LIBS_INTEL    := -L$(BREW_PREFIX_INTEL)/opt/sdl2_ttf/lib -lSDL2_ttf
 endif
 
 # -----------------------------
@@ -50,8 +49,7 @@ IMGUI_SOURCES = \
 	src/imgui/backends/imgui_impl_sdlrenderer2.cpp
 
 SRC = src/main.cpp
-TARGET = FNaF N.I.G.H.T.S.
-TARGET_DEST = build/$(TARGET)
+TARGET = Nights
 
 # -----------------------------
 # macOS bundle paths
@@ -66,33 +64,47 @@ PLIST_SRC = src/macos.plist
 # -----------------------------
 # Default target
 # -----------------------------
-all: "$(TARGET)"
-
-"$(TARGET)": $(SRC) $(IMGUI_SOURCES)
-	@mkdir -p build
-	$(CXX) $(CXXFLAGS) $(SRC) $(IMGUI_SOURCES) $(LDFLAGS) -o "$(TARGET_DEST)"
+all: macos-fat
 
 # -----------------------------
-# Clean
+# macOS ARM build
 # -----------------------------
-clean:
-	rm -rf build/*
-	rm -rf bundle/*
+macos-arm:
+	@echo "Building arm64..."
+	@mkdir -p build/arm64
+	$(CXX) $(CXXFLAGS) $(SDL2_FLAGS_ARM) $(IMG_FLAGS_ARM) $(MIX_FLAGS_ARM) $(TTF_FLAGS_ARM) -arch arm64 $(SRC) $(IMGUI_SOURCES) $(SDL2_LIBS_ARM) $(IMG_LIBS_ARM) $(MIX_LIBS_ARM) $(TTF_LIBS_ARM) -o build/arm64/$(TARGET)
+	$(MAKE) bundle TARGET_PATH=build/arm64/$(TARGET) ARCH=arm64
 
 # -----------------------------
-# macOS Bundle
+# macOS Intel build
 # -----------------------------
-bundle: "$(TARGET)"
-	@echo "Creating macOS app bundle..."
-	@mkdir -p "$(BUNDLE_MACOS)" "$(BUNDLE_RESOURCES)/sprites"
-	cp "$(TARGET_DEST)" "$(BUNDLE_MACOS)/"
+macos-intel:
+	@echo "Building x86_64..."
+	@mkdir -p build/x86_64
+	$(CXX) $(CXXFLAGS) $(SDL2_FLAGS_INTEL) $(IMG_FLAGS_INTEL) $(MIX_FLAGS_INTEL) $(TTF_FLAGS_INTEL) -arch x86_64 $(SRC) $(IMGUI_SOURCES) $(SDL2_LIBS_INTEL) $(IMG_LIBS_INTEL) $(MIX_LIBS_INTEL) $(TTF_LIBS_INTEL) -o build/x86_64/$(TARGET)
+	$(MAKE) bundle TARGET_PATH=build/x86_64/$(TARGET) ARCH=x86_64
+
+# -----------------------------
+# macOS fat build
+# -----------------------------
+macos-fat: macos-arm macos-intel
+	@echo "Creating universal binary..."
+	@mkdir -p build/universal
+	lipo -create build/arm64/$(TARGET) build/x86_64/$(TARGET) -output build/universal/$(TARGET)
+	$(MAKE) bundle TARGET_PATH=build/universal/$(TARGET) ARCH=fat
+
+# -----------------------------
+# Bundle
+# -----------------------------
+bundle:
+	@echo "Creating bundle for $(ARCH)..."
+	@mkdir -p $(BUNDLE_MACOS) $(BUNDLE_RESOURCES)/sprites
+	cp "$(TARGET_PATH)" "$(BUNDLE_MACOS)/"
 	cp assets/nights_logo.png "$(BUNDLE_RESOURCES)/"
 	cp assets/sprites/* "$(BUNDLE_RESOURCES)/sprites/"
-
-	# Copy user-provided plist
 	cp "$(PLIST_SRC)" "$(BUNDLE_DIR)/Info.plist"
 
-	# Generate .icns icon
+	# Generate .icns
 	@rm -rf MyIcon.iconset
 	@mkdir MyIcon.iconset
 	@sips -z 16 16   "$(ICON_SRC)" --out MyIcon.iconset/icon_16x16.png
@@ -107,8 +119,13 @@ bundle: "$(TARGET)"
 	@cp "$(ICON_SRC)" MyIcon.iconset/icon_512x512@2x.png
 	@iconutil -c icns MyIcon.iconset -o "$(BUNDLE_DIR)/Resources/$(ICON_NAME)"
 	@rm -rf MyIcon.iconset
-	@echo "App icon generated at $(BUNDLE_DIR)/Resources/$(ICON_NAME)"
-
 	@echo "Bundle created at $(BUNDLE_DIR)"
 
-.PHONY: all clean bundle
+# -----------------------------
+# Clean
+# -----------------------------
+clean:
+	rm -rf build/*
+	rm -rf bundle/*
+
+.PHONY: all clean macos-arm macos-intel macos-fat bundle
